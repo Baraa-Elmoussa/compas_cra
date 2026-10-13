@@ -37,6 +37,7 @@ from .cra_helper import unit_basis
 __all__ = ["cra_problem", "cra_penalty_problem", "rbe_problem"]
 
 INF = 1e19  # ipopt's conventional infinity
+LOAD = 0.1  # the largest load the solver sees
 
 
 def _tilde_weights(v_count, w_comp, w_tens, w_fric):
@@ -85,6 +86,16 @@ def _tangent_map(basis, v_count, shift):
     return csr_matrix(coo_matrix((data, (rows, cols)), shape=(3 * v_count, shift * v_count)))
 
 
+def _normalise(p):
+    """Scale the loads to the magnitude the solver converges at, whatever their units.
+
+    The problem is linear in the loads: ``p / scale`` gives the forces ``f / scale`` and
+    the same displacements, so the forces are multiplied by ``scale`` after the solve.
+    """
+    scale = np.abs(p).max() / LOAD or 1.0  # no loads, nothing to scale
+    return p / scale, scale
+
+
 def cra_problem(assembly, mu=0.84, density=1.0, d_bnd=1e-3, eps=1e-4):
     """Build the CRA NLP for an assembly.
 
@@ -92,7 +103,8 @@ def cra_problem(assembly, mu=0.84, density=1.0, d_bnd=1e-3, eps=1e-4):
     -------
     tuple(:class:`~compas_cra.nlp.problem.NLPProblem`, dict)
         The problem, and a layout dict with the index ranges needed to interpret the
-        solution vector (``nv``, ``nfree``, ``f``, ``q``, ``alpha`` slices).
+        solution vector (``nv``, ``nfree``, ``f``, ``q``, ``alpha`` slices), and the
+        ``scale`` the forces of the solution have to be multiplied by.
     """
     V = num_vertices(assembly)
     F = num_free(assembly)
@@ -102,6 +114,7 @@ def cra_problem(assembly, mu=0.84, density=1.0, d_bnd=1e-3, eps=1e-4):
     aeq = csr_matrix(equilibrium_setup(assembly))  # (6F, 3V)
     afr = csr_matrix(friction_setup(assembly, mu))  # (8V, 3V)
     p = external_force_setup(assembly, density).flatten()  # (6F,)
+    p, scale = _normalise(p)
     basis = unit_basis(assembly)  # (3V, 3) rows [w, u, v] per vertex
 
     if aeq.shape != (6 * F, 3 * V):
@@ -345,6 +358,7 @@ def cra_problem(assembly, mu=0.84, density=1.0, d_bnd=1e-3, eps=1e-4):
         "f": slice(of, of + nf),
         "q": slice(oq, oq + nq),
         "alpha": slice(oa, oa + na),
+        "scale": scale,
     }
     return problem, layout
 
@@ -363,6 +377,7 @@ def rbe_problem(assembly, mu=0.84, density=1.0):
     aeq_b = csr_matrix(equilibrium_setup(assembly, penalty=True))
     afr_b = csr_matrix(friction_setup(assembly, mu, penalty=True))
     p = external_force_setup(assembly, density).flatten()
+    p, scale = _normalise(p)
 
     n = 4 * V
     if aeq_b.shape[1] != n:
@@ -431,7 +446,7 @@ def rbe_problem(assembly, mu=0.84, density=1.0):
         hess_cols=w_nz,
         hessian=hessian,
     )
-    layout = {"nv": V, "nfree": 0, "f": slice(0, n), "q": None, "alpha": None}
+    layout = {"nv": V, "nfree": 0, "f": slice(0, n), "q": None, "alpha": None, "scale": scale}
     return problem, layout
 
 
@@ -450,6 +465,7 @@ def cra_penalty_problem(assembly, mu=0.84, density=1.0, d_bnd=1e-3, eps=1e-4):
     aeq_b = csr_matrix(equilibrium_setup(assembly, penalty=True))  # (6F, 4V)
     afr_b = csr_matrix(friction_setup(assembly, mu, penalty=True))  # (8V, 4V)
     p = external_force_setup(assembly, density).flatten()
+    p, scale = _normalise(p)
     d_basis = unit_basis(assembly)  # (3V, 3) rows [w, u, v]
 
     if aeq.shape != (6 * F, 3 * V):
@@ -661,5 +677,6 @@ def cra_penalty_problem(assembly, mu=0.84, density=1.0, d_bnd=1e-3, eps=1e-4):
         "f": slice(of, oq),
         "q": slice(oq, oa),
         "alpha": slice(oa, n),
+        "scale": scale,
     }
     return problem, layout

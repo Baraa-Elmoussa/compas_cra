@@ -154,7 +154,7 @@ def _check(result):
 
 def _result_to_assembly(x, layout, assembly, shift, verbose=False):
     """Write the solution vector to the assembly, mirroring pyomo_result_assembly."""
-    f = x[layout["f"]]
+    f = x[layout["f"]] * layout["scale"]  # back to the units of the loads
 
     offset = 0
     for edge in assembly.graph.edges():
