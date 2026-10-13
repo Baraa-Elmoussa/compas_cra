@@ -9,7 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+* `add_external_force(assembly, node, force)` applies an external load `[fx, fy, fz, mx, my, mz]` to one block, on top of its self-weight. The load is stored on the graph node and picked up by `external_force_setup`, so `cra_solve`, `cra_penalty_solve` and `rbe_solve` all see it.
+* `CRA_Assembly.gravity`, 9.81 unless set, saved with the assembly.
+
 ### Changed
+
+* The self-weight of a block is `volume * density * gravity`, where it was `volume * density`: with a density in kg/m3 and lengths in m the forces come back in N, and external forces are given in N. Results at the same density are 9.81 times larger than before; `assembly.gravity = 1` gives the previous values. `get_weight_total` and the weight arrows of `cra_view` follow.
+* `density` defaults to `None` in the solvers and in `external_force_setup`. Without a density and without external forces the blocks have unit weights, density 1 and gravity 1, and the results are those of before. With external forces a density is required, because the two have to be in consistent units, and a `ValueError` says so; blocks that all have their own density from `density_setup` do not need it.
+* The loads are normalised before the solve and the forces scaled back after it, so a model solves the same in any units. The `cra` and `penalty` solvers stopped converging once the loads were of the order of 1 and above - the 20-block arch from a density of about 2, a stack of cubes under a horizontal load in newtons.
 
 ### Removed
 
