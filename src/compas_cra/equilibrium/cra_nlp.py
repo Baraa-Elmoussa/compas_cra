@@ -96,7 +96,7 @@ def _normalise(p):
     return p / scale, scale
 
 
-def cra_problem(assembly, mu=0.84, density=1.0, d_bnd=1e-3, eps=1e-4):
+def cra_problem(assembly, mu=0.84, density=None, d_bnd=1e-3, eps=1e-4):
     """Build the CRA NLP for an assembly.
 
     Returns
@@ -363,7 +363,7 @@ def cra_problem(assembly, mu=0.84, density=1.0, d_bnd=1e-3, eps=1e-4):
     return problem, layout
 
 
-def rbe_problem(assembly, mu=0.84, density=1.0):
+def rbe_problem(assembly, mu=0.84, density=None):
     """Build the RBE quadratic program (paper Eq. 6) for an assembly.
 
     Variables are the penalty forces ``f-tilde = [fn+, fn-, fu, fv]`` per contact
@@ -450,7 +450,7 @@ def rbe_problem(assembly, mu=0.84, density=1.0):
     return problem, layout
 
 
-def cra_penalty_problem(assembly, mu=0.84, density=1.0, d_bnd=1e-3, eps=1e-4):
+def cra_penalty_problem(assembly, mu=0.84, density=None, d_bnd=1e-3, eps=1e-4):
     """Build the CRA penalty problem (paper Eq. 14) for an assembly.
 
     Variable layout: ``x = [f-tilde (4V), q (6F), alpha (V)]`` with

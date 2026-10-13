@@ -8,6 +8,7 @@ historical pyomo + executable path (per-interface ``interface.forces`` and a
 """
 
 import time
+from typing import Optional
 
 from compas_assembly.datastructures import Assembly
 
@@ -84,7 +85,7 @@ _CRA_PENALTY_OPTIONS = {
 def cra_solve_native(
     assembly: Assembly,
     mu: float = 0.84,
-    density: float = 1.0,
+    density: Optional[float] = None,
     d_bnd: float = 1e-3,
     eps: float = 1e-4,
     verbose: bool = False,
@@ -105,7 +106,7 @@ def cra_solve_native(
 def cra_penalty_solve_native(
     assembly: Assembly,
     mu: float = 0.84,
-    density: float = 1.0,
+    density: Optional[float] = None,
     d_bnd: float = 1e-3,
     eps: float = 1e-4,
     verbose: bool = False,
@@ -126,7 +127,7 @@ def cra_penalty_solve_native(
 def rbe_solve_native(
     assembly: Assembly,
     mu: float = 0.84,
-    density: float = 1.0,
+    density: Optional[float] = None,
     verbose: bool = False,
     timer: bool = False,
 ) -> Assembly:

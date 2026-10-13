@@ -34,7 +34,7 @@ def test_cra():
             forces = interface.forces
             for i, corner in enumerate(corners):
                 force = forces[i]["c_np"] - forces[i]["c_nn"]
-                if round(force, 2) == 0.25:
+                if round(force, 2) == round(assembly.gravity / 4, 2):
                     IS_FORCE_CORRECT = True
                 else:
                     IS_FORCE_CORRECT = False

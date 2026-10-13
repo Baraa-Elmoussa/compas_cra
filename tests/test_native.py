@@ -87,6 +87,7 @@ def test_cra_cubes_regression():
     assembly = compas.json_load(os.path.join(compas_cra.SAMPLE, "cubes.json")).copy(cls=CRA_Assembly)
     assembly.set_boundary_conditions([0])
     assembly_interfaces_numpy(assembly, nmax=10, amin=1e-2, tmax=1e-2)
+    assembly.gravity = 1  # the reference values are in unit weights
     cra_solve(assembly, density=1)
     resultants = sorted(interface_resultants(assembly))
     assert resultants == pytest.approx([2.9897, 6.5960], abs=1e-3)

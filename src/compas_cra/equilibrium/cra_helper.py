@@ -58,21 +58,67 @@ def friction_setup(assembly, mu, penalty=False, friction_net=False):
     return afr
 
 
-def external_force_setup(assembly, density):
-    """Set up external force vector.
+def add_external_force(assembly, node, force):
+    """Add an external load to one block of the assembly.
+
+    The load is stored on the graph node and added to the self-weight by
+    :func:`external_force_setup`, so it reaches every solver. Repeated calls
+    on the same node accumulate.
 
     Parameters
     ----------
     assembly : :class:`~compas_assembly.datastructures.Assembly`
         The rigid block assembly.
-    density : float
+    node : int
+        Assembly node key of the loaded block.
+    force : six scalars list [fx, fy, fz, mx, my, mz]
+        The external load in world coordinates, with the moments taken about the block center.
+        A force applied at a point other than the center needs its moment r x F included.
+
+    Returns
+    -------
+    None
+
+    Notes
+    -----
+    A load on a support block has no effect, supports are not part of the equilibrium.
+
+    """
+    if len(force) != 6:
+        raise ValueError("force should be six scalars [fx, fy, fz, mx, my, mz], got {}".format(len(force)))
+    if not assembly.graph.has_node(node):
+        raise KeyError("node {} is not in the assembly".format(node))
+
+    load = assembly.graph.node_attribute(node, "external_force") or [0.0] * 6
+    assembly.graph.node_attribute(node, "external_force", [float(a) + float(b) for a, b in zip(load, force)])
+
+
+def external_force_setup(assembly, density=None):
+    """Set up external force vector.
+
+    The self-weight of a block is volume * density * gravity, with the gravity of the assembly,
+    and the loads of :func:`add_external_force` are added to it.
+
+    Parameters
+    ----------
+    assembly : :class:`~compas_assembly.datastructures.Assembly`
+        The rigid block assembly.
+    density : float, optional
         Density of the material.
         If density attribute is not set, optimisation will use this density value.
+        Without it and without external forces the blocks have unit weights: density 1, gravity 1.
+        With external forces it is required, in units consistent with those forces:
+        kg/m3 for forces in N and lengths in m.
 
     Returns
     -------
     :class:`~numpy.ndarray`
         External force p.
+
+    Raises
+    ------
+    ValueError
+        If there are external forces and a block has no density.
 
     """
     free = free_nodes(assembly)
@@ -80,12 +126,25 @@ def external_force_setup(assembly, density):
     num_nodes = assembly.graph.number_of_nodes()
     key_index = {key: index for index, key in enumerate(assembly.graph.nodes())}
 
+    gravity = assembly.gravity
+    if density is None:
+        nodes = list(assembly.graph.nodes_where({"is_support": False}))
+        loaded = any(assembly.graph.node_attribute(node, "external_force") for node in nodes)
+        dense = all("density" in assembly.node_block(node).attributes for node in nodes)
+        if loaded and not dense:
+            raise ValueError("external forces are set, so a density is required: kg/m3 for forces in N, lengths in m")
+        if not loaded:
+            gravity = 1.0  # nothing to be consistent with: unit weights
+        density = 1.0
+
     p = [[0, 0, 0, 0, 0, 0] for i in range(num_nodes)]
     for node in assembly.graph.nodes():
         block = assembly.node_block(node)
         index = key_index[node]
-        p[index][2] = -block.volume() * (block.attributes["density"] if "density" in block.attributes else density)
-        print((block.attributes["density"] if "density" in block.attributes else density))
+        p[index][2] = -block.volume() * block.attributes.get("density", density) * gravity
+        load = assembly.graph.node_attribute(node, "external_force")
+        if load:
+            p[index] = [a + b for a, b in zip(p[index], load)]
 
     p = np.array(p, dtype=float)
     p = p[free, :].reshape((-1, 1), order="C")

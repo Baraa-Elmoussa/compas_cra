@@ -21,7 +21,7 @@ def test_cra_penalty():
     cra_penalty_solve(assembly, density=1)
 
     block = assembly.graph.node_attribute(1, "block")
-    weight = block.volume()
+    weight = block.volume() * assembly.gravity
     resultant = 0
     for edge in assembly.graph.edges():
         for interface in assembly.graph.edge_attribute(edge, "interfaces"):

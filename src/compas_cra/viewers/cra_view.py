@@ -471,7 +471,7 @@ def draw_weights(assembly, viewer, scale=1.0, density=1.0):
         weights.append(
             Arrow(
                 block.center(),
-                [0, 0, -block.volume() * d * scale],
+                [0, 0, -block.volume() * d * assembly.gravity * scale],
             )
         )
         # print("self-weight", -block.volume() * density)

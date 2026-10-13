@@ -19,6 +19,15 @@ class CRA_Assembly(Assembly):
         self.graph.default_node_attributes.update({"block": None, "displacement": [0, 0, 0, 0, 0, 0]})
         self.graph.default_edge_attributes.update({"interface": None, "interfaces": []})
 
+    @property
+    def gravity(self):
+        """float : The gravitational acceleration, 9.81 unless set. A block weighs volume * density * gravity."""
+        return self.attributes.get("gravity", 9.81)
+
+    @gravity.setter
+    def gravity(self, value):
+        self.attributes["gravity"] = value
+
     def add_blocks_from_rhinomeshes(self, guids):
         """Add multiple blocks from their representation as as Rhino meshes.
 
@@ -259,7 +268,7 @@ class CRA_Assembly(Assembly):
         weight = 0
         for node in self.nodes():
             block = self.graph.node_attribute(node, "block")
-            weight += block.volume() * density
+            weight += block.volume() * density * self.gravity
         return weight
 
     def get_weight_mean(self, density=1):
